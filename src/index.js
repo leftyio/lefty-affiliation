@@ -37,18 +37,32 @@ function _computeTotalAmount(items) {
       return a + b;
     }, 0);
 }
-export function createOrder(externalOrderId, items, amount) {
+
+/**
+ * Creates an order object with the given external order ID, items, and amount.
+ *
+ * @param {string} externalOrderId - The external order ID.
+ * @param {Array} items - The items included in the order.
+ * @param {string} [currencyCode] - The currency code for the order amount.
+ * @param {number} [amount] - The total amount of the order. If not provided, it will be computed based on the items.
+ * @returns {Object} - The created order object.
+ */
+export function createOrder(externalOrderId, items, currencyCode, amount) {
   return {
     externalOrderId: externalOrderId,
     items: items,
+    currencyCode: currencyCode,
     amount: amount || _computeTotalAmount(items),
   };
 }
 
-function _createSingleProductOrder(externalOrderId, productItem) {
-  return createOrder(externalOrderId, [productItem], productItem.totalAmount);
-}
-
+/**
+ * Creates a new product object with the given external product ID and name.
+ *
+ * @param {string} externalProductId - The external product ID for the new product.
+ * @param {string} name - The name of the new product.
+ * @returns {object} - The newly created product object.
+ */
 export function createProduct(externalProductId, name) {
   return {
     externalProductId: externalProductId,
@@ -56,6 +70,15 @@ export function createProduct(externalProductId, name) {
   };
 }
 
+/**
+ * Creates a product item object.
+ *
+ * @param {string} externalOrderItemId - The external order item ID.
+ * @param {object} product - The product object.
+ * @param {number} totalAmount - The total amount of the product item.
+ * @param {number} quantity - The quantity of the product item.
+ * @returns {object} - The created product item object.
+ */
 export function createProductItem(
   externalOrderItemId,
   product,
@@ -70,50 +93,60 @@ export function createProductItem(
   };
 }
 
-export function check(referer) {
+function _check(referer) {
   referer = referer || window.location.hostname;
   return _http("POST", "/check?ref=" + referer);
 }
 
-export function conversion(data, options) {
+/**
+ * Perform a conversion tracking.
+ *
+ * @param {Object} order - The Order object
+ * @param {Object} options - The options for the conversion tracking.
+ * @param {boolean} options.debug - Whether to enable debug mode for the conversion tracking.
+ * @param {string} options.referer - The referer for the conversion tracking.
+ * @returns {Promise} A promise that resolves when the conversion tracking is successful.
+ */
+export function conversion(order, options) {
   options = options || {};
 
-  data.pixelId = data.pixelId || PIXEL_ID;
-  data.currencyCode = data.currencyCode || options.currencyCode;
-  data.referringDomain = options.referer || window.location.hostname;
+  order.pixelId = order.pixelId || PIXEL_ID;
+  order.referringDomain = options.referer || window.location.hostname;
 
   var path = "/track/conversion";
 
   if (options.debug) {
-    return _http("POST", path, data);
+    return _http("POST", path, order);
   }
 
-  return check(options.referer).then(
+  return _check(options.referer).then(
     function (checkResponse) {
       checkResponse = JSON.parse(checkResponse);
       if (checkResponse.matchable === true) {
-        return _http("POST", path, data);
+        return _http("POST", path, order);
       }
     }.bind(this)
   );
 }
 
-export function conversionSingleProduct(externalOrderId, productItem, options) {
-  return conversion(
-    _createSingleProductOrder(externalOrderId, productItem),
-    options
-  );
-}
-
-export function pixel(data, options) {
+/**
+ * The 'pixel' function is used to track a conversion event by sending a pixel request to the server.
+ *
+ * @param {Object} order - The Order object.
+ * @param {Object} options - The options object containing additional configuration options.
+ * @param {string} options.referer - The referring domain associated with the conversion event.
+ *
+ * @returns {void}
+ */
+export function pixel(order, options) {
   options = options || {};
 
-  var items = data.items || [];
-  var orderId = data.externalOrderId;
-  var amount = data.amount;
+  var items = order.items || [];
+  var orderId = order.externalOrderId;
+  var amount = order.amount;
 
-  var pixelId = data.pixelId || PIXEL_ID;
-  var currency = data.currencyCode || options.currencyCode;
+  var pixelId = order.pixelId || PIXEL_ID;
+  var currency = order.currencyCode || options.currencyCode;
   var referer = options.referer || window.location.hostname;
 
   var url = _base + "/track?type=conversion";
@@ -177,13 +210,6 @@ export function pixel(data, options) {
   img.src = url;
 }
 
-export function pixelSingleProduct(externalOrderId, productItem, options) {
-  return pixel(
-    _createSingleProductOrder(externalOrderId, productItem),
-    options
-  );
-}
-
 function init(pixelId) {
   PIXEL_ID = pixelId;
 
@@ -200,8 +226,6 @@ function _lefty() {
   var ref = args.shift();
 
   switch (ref) {
-    case "check":
-      return check(...args);
     case "pixel":
       return pixel(...args);
     case "conversion":
