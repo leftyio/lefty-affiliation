@@ -16,7 +16,7 @@ module.exports = {
   },
   output: {
     path: path.resolve(__dirname, "dist"),
-    filename: "affiliation.js",
+    filename: "index.min.js",
     library: "lefty",
     libraryTarget: "umd",
   },
