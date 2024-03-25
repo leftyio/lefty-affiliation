@@ -5,7 +5,8 @@
   "main": "dist/affiliation.js",
   "license": "ISC",
   "scripts": {
-    "build": "webpack"
+    "dev": "webpack --mode=development",
+    "build": "webpack --mode=production"
   },
   "devDependencies": {
     "@babel/core": "^7.24.3",

@@ -16,8 +16,8 @@ module.exports = {
   },
   output: {
     path: path.resolve(__dirname, "dist"),
-    filename: "index.min.js",
-    library: "lefty",
+    filename: "index.js",
+    library: "Lefty",
     libraryTarget: "umd",
   },
   devServer: {
