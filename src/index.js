@@ -1,3 +1,5 @@
+let PIXEL_ID;
+
 const _base = "https://a.lefty.io";
 
 function _http(method, path, data) {
@@ -76,7 +78,7 @@ export function check(referer) {
 export function conversion(data, options) {
   options = options || {};
 
-  data.pixelId = data.pixelId || options.pixelId;
+  data.pixelId = data.pixelId || PIXEL_ID;
   data.currencyCode = data.currencyCode || options.currencyCode;
   data.referringDomain = options.referer || window.location.hostname;
 
@@ -110,7 +112,7 @@ export function pixel(data, options) {
   var orderId = data.externalOrderId;
   var amount = data.amount;
 
-  var pixelId = data.pixelId || options.pixelId;
+  var pixelId = data.pixelId || PIXEL_ID;
   var currency = data.currencyCode || options.currencyCode;
   var referer = options.referer || window.location.hostname;
 
@@ -182,9 +184,19 @@ export function pixelSingleProduct(externalOrderId, productItem, options) {
   );
 }
 
+function init(pixelId) {
+  PIXEL_ID = pixelId;
+
+  const actions = window._lefty || [];
+
+  while (actions.length) {
+    const action = actions.shift();
+    _lefty(...action);
+  }
+}
+
 function _lefty() {
   const args = [...arguments];
-  console.log("LEFTY", args);
   var ref = args.shift();
 
   switch (ref) {
@@ -194,14 +206,9 @@ function _lefty() {
       return pixel(...args);
     case "conversion":
       return conversion(...args);
+    case "init":
+      return init(...args);
   }
 }
 
 window.lefty = _lefty;
-
-const actions = window._lefty || [];
-
-while (actions.length) {
-  const action = actions.shift();
-  lefty(...action);
-}
