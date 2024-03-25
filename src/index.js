@@ -186,7 +186,15 @@ function _lefty() {
   const args = [...arguments];
   console.log("LEFTY", args);
   var ref = args.shift();
-  Lefty[ref](...args);
+
+  switch (ref) {
+    case "check":
+      return check(...args);
+    case "pixel":
+      return pixel(...args);
+    case "conversion":
+      return conversion(...args);
+  }
 }
 
 window.lefty = _lefty;
