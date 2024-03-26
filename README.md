@@ -18,3 +18,9 @@ document.head.appendChild(script);
 
 lefty("init", "<PIXEL_ID>");
 ```
+
+### Run debug in mode
+
+```js
+lefty("init", "<PIXEL_ID>", { debug: true });
+```

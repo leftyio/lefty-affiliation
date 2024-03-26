@@ -138,7 +138,7 @@ export function conversion(order, options) {
     return _http("POST", path, order);
   }
 
-  return _check(options.referer, { xhr: true }).then(
+  return _check(order.referringDomain, { xhr: true }).then(
     (checkResponse) => {
       checkResponse = JSON.parse(checkResponse);
       if (checkResponse.matchable === true) {
@@ -235,6 +235,8 @@ export function pixel(order, options) {
     console.log("Lefty - pixel", order);
     return _pixel(order, options);
   }
+
+  options.referer = options.referer || window.location.hostname;
 
   return _check(options.referer).then(
     () => _pixel(order, options),
