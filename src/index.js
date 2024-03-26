@@ -1,14 +1,15 @@
 let PIXEL_ID;
+let DEBUG_MODE = false;
 
 const _base = "https://a.lefty.io";
 
 function _http(method, path, data) {
-  var xhr = new XMLHttpRequest();
+  let xhr = new XMLHttpRequest();
   xhr.open(method, _base + path, true);
   xhr.setRequestHeader("Content-type", "application/json");
   xhr.withCredentials = true;
 
-  var promise = new Promise(function (resolve, reject) {
+  let promise = new Promise(function (resolve, reject) {
     xhr.onreadystatechange = function () {
       if (this.readyState === 4)
         if (this.status === 200) {
@@ -93,9 +94,27 @@ export function createProductItem(
   };
 }
 
-function _check(referer) {
+function _check(referer, options) {
+  options = options || {};
+
   referer = referer || window.location.hostname;
-  return _http("POST", "/check?ref=" + referer);
+
+  const path = "/check?ref=" + referer;
+
+  if (options.xhr) {
+    return _http("POST", path);
+  }
+
+  const url = _base + path;
+
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+
+    img.onload = resolve;
+    img.onerror = reject;
+
+    img.src = url;
+  });
 }
 
 /**
@@ -103,7 +122,6 @@ function _check(referer) {
  *
  * @param {Object} order - The Order object
  * @param {Object} options - The options for the conversion tracking.
- * @param {boolean} options.debug - Whether to enable debug mode for the conversion tracking.
  * @param {string} options.referer - The referer for the conversion tracking.
  * @returns {Promise} A promise that resolves when the conversion tracking is successful.
  */
@@ -113,43 +131,36 @@ export function conversion(order, options) {
   order.pixelId = order.pixelId || PIXEL_ID;
   order.referringDomain = options.referer || window.location.hostname;
 
-  var path = "/track/conversion";
+  const path = "/track/conversion";
 
-  if (options.debug) {
+  if (DEBUG_MODE) {
+    console.log("Lefty - conversion", order);
     return _http("POST", path, order);
   }
 
-  return _check(options.referer).then(
-    function (checkResponse) {
+  return _check(options.referer, { xhr: true }).then(
+    (checkResponse) => {
       checkResponse = JSON.parse(checkResponse);
       if (checkResponse.matchable === true) {
         return _http("POST", path, order);
       }
-    }.bind(this)
+    },
+    (error) => console.error("Lefty - check", error)
   );
 }
 
-/**
- * The 'pixel' function is used to track a conversion event by sending a pixel request to the server.
- *
- * @param {Object} order - The Order object.
- * @param {Object} options - The options object containing additional configuration options.
- * @param {string} options.referer - The referring domain associated with the conversion event.
- *
- * @returns {void}
- */
-export function pixel(order, options) {
+function _pixel(order, options) {
   options = options || {};
 
-  var items = order.items || [];
-  var orderId = order.externalOrderId;
-  var amount = order.amount;
+  const items = order.items || [];
+  const orderId = order.externalOrderId;
+  const amount = order.amount;
 
-  var pixelId = order.pixelId || PIXEL_ID;
-  var currency = order.currencyCode || options.currencyCode;
-  var referer = options.referer || window.location.hostname;
+  const pixelId = order.pixelId || PIXEL_ID;
+  const currency = order.currencyCode || options.currencyCode;
+  const referer = options.referer || window.location.hostname;
 
-  var url = _base + "/track?type=conversion";
+  let url = _base + "/track?type=conversion";
   url += "&orderId=" + orderId;
   url += "&ref=" + referer;
 
@@ -166,31 +177,31 @@ export function pixel(order, options) {
   }
 
   if (items.length !== 0) {
-    var pIds = items
+    const pIds = items
       .map(function (item) {
         return "pId=" + item.product.externalProductId;
       })
       .join("&");
 
-    var pNames = items
+    const pNames = items
       .map(function (item) {
         return "pName=" + encodeURIComponent(item.product.name);
       })
       .join("&");
 
-    var itemQty = items
+    const itemQty = items
       .map(function (item) {
         return "itemQty=" + item.quantity;
       })
       .join("&");
 
-    var itemAmount = items
+    const itemAmount = items
       .map(function (item) {
         return "itemAmount=" + item.totalAmount;
       })
       .join("&");
 
-    var itemIds = items
+    const itemIds = items
       .map(function (item) {
         return "itemId=" + item.externalOrderItemId;
       })
@@ -206,12 +217,36 @@ export function pixel(order, options) {
     }
   }
 
-  var img = new Image();
+  const img = new Image();
   img.src = url;
 }
 
-function init(pixelId) {
+/**
+ * The 'pixel' function is used to track a conversion event by sending a pixel request to the server.
+ *
+ * @param {Object} order - The Order object.
+ * @param {Object} options - The options object containing additional configuration options.
+ * @param {string} options.referer - The referring domain associated with the conversion event.
+ *
+ * @returns {void}
+ */
+export function pixel(order, options) {
+  if (DEBUG_MODE) {
+    console.log("Lefty - pixel", order);
+    return _pixel(order, options);
+  }
+
+  return _check(options.referer).then(
+    () => _pixel(order, options),
+    (error) => console.error("Lefty - check", error)
+  );
+}
+
+function init(pixelId, options) {
+  options = options || {};
+
   PIXEL_ID = pixelId;
+  DEBUG_MODE = options.debug || false;
 
   const actions = window._lefty || [];
 
@@ -223,7 +258,7 @@ function init(pixelId) {
 
 function _lefty() {
   const args = [...arguments];
-  var ref = args.shift();
+  const ref = args.shift();
 
   switch (ref) {
     case "pixel":
