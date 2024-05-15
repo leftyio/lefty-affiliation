@@ -7,8 +7,7 @@
 Copy/Paste this at the end of you head tag
 
 ```html
-(function(t,e,i,n){t._lefty=t._lefty||[];function
-s(){_lefty.push(arguments)}const
+(function(t,e,i,n){t._lefty=t._lefty||[];function s(){_lefty.push(arguments)}var
 c=e.createElement("script");c.setAttribute("src","https://cdn.jsdelivr.net/gh/leftyio/lefty-affiliation@"+i+"/dist/index.min.js");c.setAttribute("async","");e.head.appendChild(c)})(window,document,"0");
 ```
 
@@ -58,7 +57,7 @@ function lefty() {
   _lefty.push(arguments);
 }
 
-const script = document.createElement("script");
+var script = document.createElement("script");
 script.setAttribute(
   "src",
   "https://cdn.jsdelivr.net/gh/leftyio/lefty-affiliation@0/dist/index.min.js"
